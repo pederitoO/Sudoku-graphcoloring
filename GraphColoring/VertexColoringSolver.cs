@@ -5,267 +5,169 @@ using Sudoku.Shared;
 
 namespace GraphColoring
 {
-    public class VertexColoringSolver : ISudokuSolver
+    // Implémentation du solveur de Sudoku utilisant l'algorithme DSatur pour la coloration de graphes.
+    public class DSaturSolver : ISudokuSolver
     {
+        // Gestion des connexions de Sudoku via un graphe.
         private SudokuConnections sudokuGraph;
+        // Matrice pour mapper les positions de la grille de Sudoku aux noeuds du graphe.
         private int[][] mappedGrid;
-        private Dictionary<int, int?> vertexColors;
+        // Limite maximale d'essais pour éviter les boucles infinies.
         private const int MaxAttempts = 1000000;
 
-        public VertexColoringSolver()
+        // Constructeur qui initialise le graphe et la matrice de mappage.
+        public DSaturSolver()
         {
             sudokuGraph = new SudokuConnections();
             mappedGrid = GetMappedMatrix();
-            vertexColors = new Dictionary<int, int?>();
         }
 
+        // Méthode principale pour résoudre le Sudoku.
         public SudokuGrid Solve(SudokuGrid s)
         {
-            InitializeColors(s);
-            if (SolveWithBacktracking())
+            var board = new int[9, 9]; // Tableau temporaire pour stocker les valeurs de Sudoku.
+            // Copie les valeurs actuelles du Sudoku dans le tableau board.
+            for (int i = 0; i < 9; i++)
+                for (int j = 0; j < 9; j++)
+                    board[i, j] = s.Cells[i, j];
+
+            // Tente de résoudre le Sudoku en utilisant DSatur avec backtracking.
+            if (SolveDSaturWithBacktracking(board))
             {
-                TransferColorsToGrid(s);
+                // Si résolu, recopie les valeurs résolues dans le Sudoku original.
+                for (int i = 0; i < 9; i++)
+                    for (int j = 0; j < 9; j++)
+                        s.Cells[i, j] = board[i, j];
             }
-            return s;
+
+            return s; // Retourne la grille de Sudoku résolue ou non modifiée.
         }
 
-        private bool SolveWithBacktracking()
+        // Résout le Sudoku en utilisant un algorithme DSatur avec backtracking.
+        private bool SolveDSaturWithBacktracking(int[,] board)
         {
-            var uncoloredVertex = FindMostConstrainedVertex();
-            if (uncoloredVertex == -1)
-                return true;
+            var (row, col) = FindEmptyCell(board); // Trouve la prochaine cellule vide avec la plus haute saturation.
+            if (row == -1 && col == -1) return true; // Si aucune cellule vide, Sudoku est résolu.
 
-            var availableColors = GetSortedAvailableColors(uncoloredVertex);
-            foreach (var color in availableColors)
+            // Obtient les valeurs possibles pour la cellule vide.
+            var possibleValues = GetPossibleValues(board, row, col);
+            foreach (var value in possibleValues)
             {
-                if (IsSafeToColor(uncoloredVertex, color))
+                // Vérifie si la valeur peut être placée sans conflit.
+                if (IsSafe(board, row, col, value))
                 {
-                    vertexColors[uncoloredVertex] = color;
-                    if (SolveWithBacktracking())
+                    board[row, col] = value; // Place la valeur.
+
+                    // Continue de résoudre récursivement.
+                    if (SolveDSaturWithBacktracking(board))
                         return true;
-                    vertexColors[uncoloredVertex] = null;
+
+                    board[row, col] = 0; // Efface la valeur si elle ne mène pas à une solution (backtracking).
                 }
             }
-            return false;
+            return false; // Retourne faux si aucune valeur n'est valide.
         }
 
-        private int FindMostConstrainedVertex()
+        // Trouve une cellule vide dans la grille avec le plus haut degré de saturation.
+        private (int row, int col) FindEmptyCell(int[,] board)
         {
-            int maxConstraints = -1;
-            int selectedVertex = -1;
+            int maxSaturation = -1;
+            int selectedRow = -1;
+            int selectedCol = -1;
 
-            for (int vertex = 1; vertex <= 81; vertex++)
-            {
-                if (!vertexColors[vertex].HasValue)
-                {
-                    int constraints = CountConstraints(vertex);
-                    if (constraints > maxConstraints)
-                    {
-                        maxConstraints = constraints;
-                        selectedVertex = vertex;
-                    }
-                }
-            }
-            return selectedVertex;
-        }
-
-        private int CountConstraints(int vertex)
-        {
-            int count = 0;
-            var usedColors = new HashSet<int>();
-
-            for (int adj = 1; adj <= 81; adj++)
-            {
-                if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && vertexColors[adj].HasValue)
-                {
-                    count++;
-                    usedColors.Add(vertexColors[adj].Value);
-                }
-            }
-            return count * 10 + usedColors.Count;
-        }
-
-        private List<int> GetSortedAvailableColors(int vertex)
-        {
-            var colorFrequency = new Dictionary<int, int>();
-            for (int color = 1; color <= 9; color++)
-            {
-                colorFrequency[color] = 0;
-            }
-
-            for (int adj = 1; adj <= 81; adj++)
-            {
-                if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && vertexColors[adj].HasValue)
-                {
-                    var adjColor = vertexColors[adj].Value;
-                    colorFrequency[adjColor] = colorFrequency[adjColor] + 1;
-                }
-            }
-
-            return Enumerable.Range(1, 9)
-                .OrderBy(c => colorFrequency[c])
-                .ToList();
-        }
-
-        private bool IsSafeToColor(int vertex, int color)
-        {
-            for (int adj = 1; adj <= 81; adj++)
-            {
-                if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && 
-                    vertexColors[adj].HasValue && 
-                    vertexColors[adj].Value == color)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private void InitializeColors(SudokuGrid s)
-        {
-            vertexColors.Clear();
-            
-            // Initialize all vertices as uncolored
-            for (int i = 1; i <= 81; i++)
-            {
-                vertexColors[i] = null;
-            }
-
-            // Set initial colors from the Sudoku grid
             for (int row = 0; row < 9; row++)
             {
                 for (int col = 0; col < 9; col++)
                 {
-                    if (s.Cells[row, col] != 0)
+                    if (board[row, col] == 0) // Seulement les cellules vides.
                     {
-                        int vertexId = mappedGrid[row][col];
-                        vertexColors[vertexId] = s.Cells[row, col];
-                    }
-                }
-            }
-        }
-
-        private void ColorGraph()
-        {
-            bool[] available = new bool[10];
-            int attempts = 0;
-            bool success = false;
-
-            while (!success && attempts < 100)
-            {
-                success = TryColorGraph(available);
-                attempts++;
-            }
-        }
-
-        private bool TryColorGraph(bool[] available)
-        {
-            // Reset all non-fixed colors
-            for (int vertex = 1; vertex <= 81; vertex++)
-            {
-                if (!IsFixedVertex(vertex))
-                {
-                    vertexColors[vertex] = null;
-                }
-            }
-        
-            // Color each uncolored vertex
-            for (int vertex = 1; vertex <= 81; vertex++)
-            {
-                if (!vertexColors[vertex].HasValue)
-                {
-                    // Reset available colors
-                    for (int i = 0; i < 10; i++)
-                        available[i] = true;
-        
-                    // Mark colors of adjacent vertices as unavailable
-                    for (int adj = 1; adj <= 81; adj++)
-                    {
-                        if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && vertexColors[adj].HasValue)
+                        int saturation = CalculateSaturation(board, row, col);
+                        if (saturation > maxSaturation)
                         {
-                            available[vertexColors[adj].Value] = false;
+                            maxSaturation = saturation;
+                            selectedRow = row;
+                            selectedCol = col;
                         }
                     }
-        
-                    // Get all available colors and shuffle them
-                    var possibleColors = new List<int>();
-                    for (int color = 1; color <= 9; color++)
-                    {
-                        if (available[color])
-                            possibleColors.Add(color);
-                    }
-        
-                    if (possibleColors.Count == 0)
+                }
+            }
+            return (selectedRow, selectedCol); // Retourne la position de la cellule avec la plus haute saturation.
+        }
+
+        // Calcule le degré de saturation d'une cellule, c'est-à-dire le nombre de valeurs différentes adjacents à cette cellule.
+        private int CalculateSaturation(int[,] board, int row, int col)
+        {
+            var usedValues = new HashSet<int>();
+
+            // Parcourt la ligne, la colonne, et le bloc pour compter les valeurs uniques.
+            for (int c = 0; c < 9; c++)
+                if (board[row, c] != 0)
+                    usedValues.Add(board[row, c]);
+
+            for (int r = 0; r < 9; r++)
+                if (board[r, col] != 0)
+                    usedValues.Add(board[r, col]);
+
+            int boxRow = row - row % 3;
+            int boxCol = col - col % 3;
+            for (int r = boxRow; r < boxRow + 3; r++)
+                for (int c = boxCol; c < boxCol + 3; c++)
+                    if (board[r, c] != 0)
+                        usedValues.Add(board[r, c]);
+
+            return usedValues.Count; // Nombre de valeurs uniques.
+        }
+
+        // Retourne une liste de valeurs possibles qui peuvent être placées dans une cellule spécifique sans violer les règles du Sudoku.
+        private List<int> GetPossibleValues(int[,] board, int row, int col)
+        {
+            var used = new bool[10]; // Marque les chiffres déjà utilisés dans la ligne, la colonne et le bloc.
+
+            for (int c = 0; c < 9; c++)
+                if (board[row, c] != 0)
+                    used[board[row, c]] = true;
+
+            for (int r = 0; r < 9; r++)
+                if (board[r, col] != 0)
+                    used[board[r, col]] = true;
+
+            int boxRow = row - row % 3;
+            int boxCol = col - col % 3;
+            for (int r = boxRow; r < boxRow + 3; r++)
+                for (int c = boxCol; c < boxCol + 3; c++)
+                    if (board[r, c] != 0)
+                        used[board[r, c]] = true;
+
+            var possibleValues = new List<int>();
+            for (int i = 1; i <= 9; i++)
+                if (!used[i])
+                    possibleValues.Add(i); // Ajoute le chiffre s'il n'est pas déjà utilisé.
+
+            return possibleValues; // Liste des chiffres possibles pour la cellule.
+        }
+
+        // Vérifie si placer un chiffre dans une cellule est sûr, c'est-à-dire qu'il ne crée pas de conflits selon les règles du Sudoku.
+        private bool IsSafe(int[,] board, int row, int col, int num)
+        {
+            for (int c = 0; c < 9; c++)
+                if (board[row, c] == num)
+                    return false;
+
+            for (int r = 0; r < 9; r++)
+                if (board[r, col] == num)
+                    return false;
+
+            int boxRow = row - row % 3;
+            int boxCol = col - col % 3;
+            for (int r = boxRow; r < boxRow + 3; r++)
+                for (int c = boxCol; c < boxCol + 3; c++)
+                    if (board[r, c] == num)
                         return false;
-        
-                    // Try a random available color
-                    var rnd = new Random();
-                    vertexColors[vertex] = possibleColors[rnd.Next(possibleColors.Count)];
-                }
-            }
-        
-            return IsValidColoring();
+
+            return true; // Retourne vrai si placer le chiffre ne crée pas de conflit.
         }
 
-        private bool IsFixedVertex(int vertex)
-        {
-            return vertexColors.ContainsKey(vertex) && 
-                   vertexColors[vertex].HasValue && 
-                   IsPartOfInitialGrid(vertex);
-        }
-
-        private bool IsPartOfInitialGrid(int vertex)
-        {
-            for (int row = 0; row < 9; row++)
-            {
-                for (int col = 0; col < 9; col++)
-                {
-                    if (mappedGrid[row][col] == vertex)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private void TransferColorsToGrid(SudokuGrid s)
-        {
-            for (int row = 0; row < 9; row++)
-            {
-                for (int col = 0; col < 9; col++)
-                {
-                    int vertexId = mappedGrid[row][col];
-                    if (vertexColors[vertexId].HasValue)
-                    {
-                        s.Cells[row, col] = vertexColors[vertexId].Value;
-                    }
-                }
-            }
-        }
-
-        private bool IsValidColoring()
-        {
-            // Check if all vertices are colored
-            if (vertexColors.Values.Any(c => !c.HasValue))
-                return false;
-
-            // Check if adjacent vertices have different colors
-            for (int v = 1; v <= 81; v++)
-            {
-                for (int u = v + 1; u <= 81; u++)
-                {
-                    if (sudokuGraph.Graph.IsNeighbour(v, u) && 
-                        vertexColors[v].Value == vertexColors[u].Value)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
+        // Génère une matrice pour associer les cellules de la grille de Sudoku aux noeuds du graphe.
         private int[][] GetMappedMatrix()
         {
             var matrix = new int[9][];
@@ -276,13 +178,11 @@ namespace GraphColoring
 
             int count = 1;
             for (int rows = 0; rows < 9; rows++)
-            {
                 for (int cols = 0; cols < 9; cols++)
                 {
-                    matrix[rows][cols] = count++;
+                    matrix[rows][cols] = count++; // Attribue un index unique à chaque cellule.
                 }
-            }
-            return matrix;
+            return matrix; // Retourne la matrice mappée.
         }
     }
 }
