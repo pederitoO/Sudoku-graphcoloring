@@ -1,3 +1,4 @@
+TEST
 using System.Collections.Generic;
 
 namespace GraphColoring
