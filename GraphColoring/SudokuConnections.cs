@@ -2,14 +2,21 @@ using System.Collections.Generic;
 
 namespace GraphColoring
 {
+    // Classe gérant les connexions entre les cellules d'une grille de Sudoku à l'aide d'un graphe.
     public class SudokuConnections
     {
+        // Graphe représentant les connexions entre les cellules du Sudoku.
         public Graph Graph { get; private set; }
+        // Nombre de lignes dans la grille de Sudoku.
         private readonly int Rows = 9;
+        // Nombre de colonnes dans la grille de Sudoku.
         private readonly int Cols = 9;
+        // Nombre total de blocs dans la grille.
         private readonly int TotalBlocks;
+        // Ensemble des identifiants de tous les noeuds dans le graphe.
         public IEnumerable<int> AllIds { get; private set; }
 
+        // Constructeur qui initialise le graphe et crée les connexions entre les cellules.
         public SudokuConnections()
         {
             Graph = new Graph();
@@ -19,6 +26,7 @@ namespace GraphColoring
             AllIds = Graph.GetAllNodesIds();
         }
 
+        // Génère les noeuds du graphe pour chaque cellule du Sudoku.
         private void GenerateGraph()
         {
             for (int idx = 1; idx <= TotalBlocks; idx++)
@@ -27,6 +35,7 @@ namespace GraphColoring
             }
         }
 
+        // Connecte les noeuds du graphe selon les règles du Sudoku.
         private void ConnectEdges()
         {
             var matrix = GetGridMatrix();
@@ -45,6 +54,7 @@ namespace GraphColoring
             ConnectThose(headConnections);
         }
 
+        // Effectue les connexions entre les noeuds en fonction des relations définies.
         private void ConnectThose(Dictionary<int, Dictionary<string, List<int>>> headConnections)
         {
             foreach (var head in headConnections.Keys)
@@ -60,15 +70,17 @@ namespace GraphColoring
             }
         }
 
+        // Détermine quels noeuds doivent être connectés à partir d'une position donnée dans la grille.
         private Dictionary<string, List<int>> WhatToConnect(int[][] matrix, int rows, int cols)
         {
             var connections = new Dictionary<string, List<int>>
             {
-                ["rows"] = new List<int>(),
-                ["cols"] = new List<int>(),
-                ["blocks"] = new List<int>()
+                ["rows"] = new List<int>(), // Connexions dans la même ligne.
+                ["cols"] = new List<int>(), // Connexions dans la même colonne.
+                ["blocks"] = new List<int>() // Connexions dans le même bloc de 3x3.
             };
 
+            // Ajoute les connexions pour les lignes, colonnes et blocs en évitant les doublons.
             // ROWS
             for (int c = cols + 1; c < 9; c++)
             {
@@ -81,83 +93,27 @@ namespace GraphColoring
                 connections["cols"].Add(matrix[r][cols]);
             }
 
-            // BLOCKS
-            if (rows % 3 == 0)
+            // BLOCKS: déterminer les cellules à connecter dans le bloc 3x3 en fonction de la position actuelle.
+            // Calcul basé sur les indices modulaires pour identifier les autres cellules du même bloc.
+            int startRow = rows - rows % 3;
+            int startCol = cols - cols % 3;
+            for (int i = 0; i < 3; i++)
             {
-                if (cols % 3 == 0)
+                for (int j = 0; j < 3; j++)
                 {
-                    connections["blocks"].Add(matrix[rows + 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols + 2]);
-                    connections["blocks"].Add(matrix[rows + 2][cols + 1]);
-                    connections["blocks"].Add(matrix[rows + 2][cols + 2]);
-                }
-                else if (cols % 3 == 1)
-                {
-                    connections["blocks"].Add(matrix[rows + 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows + 2][cols - 1]);
-                    connections["blocks"].Add(matrix[rows + 2][cols + 1]);
-                }
-                else if (cols % 3 == 2)
-                {
-                    connections["blocks"].Add(matrix[rows + 1][cols - 2]);
-                    connections["blocks"].Add(matrix[rows + 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows + 2][cols - 2]);
-                    connections["blocks"].Add(matrix[rows + 2][cols - 1]);
-                }
-            }
-            else if (rows % 3 == 1)
-            {
-                if (cols % 3 == 0)
-                {
-                    connections["blocks"].Add(matrix[rows - 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols + 2]);
-                    connections["blocks"].Add(matrix[rows + 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols + 2]);
-                }
-                else if (cols % 3 == 1)
-                {
-                    connections["blocks"].Add(matrix[rows - 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols + 1]);
-                }
-                else if (cols % 3 == 2)
-                {
-                    connections["blocks"].Add(matrix[rows - 1][cols - 2]);
-                    connections["blocks"].Add(matrix[rows - 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows + 1][cols - 2]);
-                    connections["blocks"].Add(matrix[rows + 1][cols - 1]);
-                }
-            }
-            else if (rows % 3 == 2)
-            {
-                if (cols % 3 == 0)
-                {
-                    connections["blocks"].Add(matrix[rows - 2][cols + 1]);
-                    connections["blocks"].Add(matrix[rows - 2][cols + 2]);
-                    connections["blocks"].Add(matrix[rows - 1][cols + 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols + 2]);
-                }
-                else if (cols % 3 == 1)
-                {
-                    connections["blocks"].Add(matrix[rows - 2][cols - 1]);
-                    connections["blocks"].Add(matrix[rows - 2][cols + 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols - 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols + 1]);
-                }
-                else if (cols % 3 == 2)
-                {
-                    connections["blocks"].Add(matrix[rows - 2][cols - 2]);
-                    connections["blocks"].Add(matrix[rows - 2][cols - 1]);
-                    connections["blocks"].Add(matrix[rows - 1][cols - 2]);
-                    connections["blocks"].Add(matrix[rows - 1][cols - 1]);
+                    int adjRow = startRow + i;
+                    int adjCol = startCol + j;
+                    if (adjRow != rows || adjCol != cols)  // Éviter de se connecter à soi-même.
+                    {
+                        connections["blocks"].Add(matrix[adjRow][adjCol]);
+                    }
                 }
             }
 
             return connections;
         }
 
+        // Crée une matrice représentant les indices des cellules de la grille de Sudoku.
         private int[][] GetGridMatrix()
         {
             var matrix = new int[9][];
@@ -171,7 +127,7 @@ namespace GraphColoring
             {
                 for (int cols = 0; cols < 9; cols++)
                 {
-                    matrix[rows][cols] = count++;
+                    matrix[rows][cols] = count++; // Attribue un numéro unique à chaque cellule, de 1 à 81.
                 }
             }
             return matrix;
