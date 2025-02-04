@@ -2,7 +2,12 @@ Bienvenue sur le dépôt du TP Sudoku.....
 
 ## Présentation des solvers
 
-Listez ici la documentation qui accompagne vos solvers.
+DSaturSolver.cs :
+- https://www.tutorialspoint.com/dsatur-algorithm-for-graph-coloring
+- https://www.geeksforgeeks.org/dsatur-algorithm-for-graph-coloring/
+
+QuickGraph.cs :
+- 
 
 ### [Solvers xxx](Sudoku.Xxx/README.md)
 
