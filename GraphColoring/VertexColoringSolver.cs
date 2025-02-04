@@ -5,13 +5,19 @@ using Sudoku.Shared;
 
 namespace GraphColoring
 {
+    // Implémentation d'un solveur de Sudoku utilisant un algorithme de coloration de sommets.
     public class VertexColoringSolver : ISudokuSolver
     {
+        // Graphe des connexions du Sudoku, utilisé pour déterminer les voisins de chaque cellule.
         private SudokuConnections sudokuGraph;
+        // Matrice pour mapper les positions de la grille de Sudoku aux indices des sommets du graphe.
         private int[][] mappedGrid;
+        // Dictionnaire pour stocker la couleur assignée à chaque sommet.
         private Dictionary<int, int?> vertexColors;
+        // Limite maximale d'essais pour prévenir les boucles infinies.
         private const int MaxAttempts = 1000000;
 
+        // Constructeur qui initialise les structures nécessaires au solveur.
         public VertexColoringSolver()
         {
             sudokuGraph = new SudokuConnections();
@@ -19,6 +25,7 @@ namespace GraphColoring
             vertexColors = new Dictionary<int, int?>();
         }
 
+        // Résout la grille de Sudoku donnée.
         public SudokuGrid Solve(SudokuGrid s)
         {
             InitializeColors(s);
@@ -29,11 +36,12 @@ namespace GraphColoring
             return s;
         }
 
+        // Tente de résoudre le Sudoku par backtracking.
         private bool SolveWithBacktracking()
         {
-            var uncoloredVertex = FindMostConstrainedVertex();
+            int uncoloredVertex = FindMostConstrainedVertex();
             if (uncoloredVertex == -1)
-                return true;
+                return true; // Si tous les sommets sont colorés, la solution est trouvée.
 
             var availableColors = GetSortedAvailableColors(uncoloredVertex);
             foreach (var color in availableColors)
@@ -43,12 +51,13 @@ namespace GraphColoring
                     vertexColors[uncoloredVertex] = color;
                     if (SolveWithBacktracking())
                         return true;
-                    vertexColors[uncoloredVertex] = null;
+                    vertexColors[uncoloredVertex] = null; // Retire la couleur si elle mène à une impasse.
                 }
             }
             return false;
         }
 
+        // Trouve le sommet le plus contraint (celui avec le moins d'options de couleur).
         private int FindMostConstrainedVertex()
         {
             int maxConstraints = -1;
@@ -69,6 +78,7 @@ namespace GraphColoring
             return selectedVertex;
         }
 
+        // Compte le nombre de contraintes pour un sommet donné.
         private int CountConstraints(int vertex)
         {
             int count = 0;
@@ -82,9 +92,10 @@ namespace GraphColoring
                     usedColors.Add(vertexColors[adj].Value);
                 }
             }
-            return count * 10 + usedColors.Count;
+            return count * 10 + usedColors.Count; // Poids les contraintes pour prioriser les sommets les plus contraints.
         }
 
+        // Obtient les couleurs disponibles pour un sommet, triées par fréquence d'utilisation pour minimiser les conflits.
         private List<int> GetSortedAvailableColors(int vertex)
         {
             var colorFrequency = new Dictionary<int, int>();
@@ -98,15 +109,16 @@ namespace GraphColoring
                 if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && vertexColors[adj].HasValue)
                 {
                     var adjColor = vertexColors[adj].Value;
-                    colorFrequency[adjColor] = colorFrequency[adjColor] + 1;
+                    colorFrequency[adjColor]++;
                 }
             }
 
             return Enumerable.Range(1, 9)
                 .OrderBy(c => colorFrequency[c])
-                .ToList();
+                .ToList(); // Trie les couleurs par ordre croissant de conflit potentiel.
         }
 
+        // Vérifie si colorer un sommet avec une couleur donnée ne crée pas de conflit.
         private bool IsSafeToColor(int vertex, int color)
         {
             for (int adj = 1; adj <= 81; adj++)
@@ -115,23 +127,24 @@ namespace GraphColoring
                     vertexColors[adj].HasValue && 
                     vertexColors[adj].Value == color)
                 {
-                    return false;
+                    return false; // Retourne faux si un voisin a déjà cette couleur.
                 }
             }
             return true;
         }
 
+        // Initialise les couleurs des sommets basées sur les valeurs initiales de la grille de Sudoku.
         private void InitializeColors(SudokuGrid s)
         {
             vertexColors.Clear();
             
-            // Initialize all vertices as uncolored
+            // Initialise tous les sommets comme non colorés.
             for (int i = 1; i <= 81; i++)
             {
                 vertexColors[i] = null;
             }
 
-            // Set initial colors from the Sudoku grid
+            // Définit les couleurs initiales à partir de la grille de Sudoku.
             for (int row = 0; row < 9; row++)
             {
                 for (int col = 0; col < 9; col++)
@@ -145,90 +158,7 @@ namespace GraphColoring
             }
         }
 
-        private void ColorGraph()
-        {
-            bool[] available = new bool[10];
-            int attempts = 0;
-            bool success = false;
-
-            while (!success && attempts < 100)
-            {
-                success = TryColorGraph(available);
-                attempts++;
-            }
-        }
-
-        private bool TryColorGraph(bool[] available)
-        {
-            // Reset all non-fixed colors
-            for (int vertex = 1; vertex <= 81; vertex++)
-            {
-                if (!IsFixedVertex(vertex))
-                {
-                    vertexColors[vertex] = null;
-                }
-            }
-        
-            // Color each uncolored vertex
-            for (int vertex = 1; vertex <= 81; vertex++)
-            {
-                if (!vertexColors[vertex].HasValue)
-                {
-                    // Reset available colors
-                    for (int i = 0; i < 10; i++)
-                        available[i] = true;
-        
-                    // Mark colors of adjacent vertices as unavailable
-                    for (int adj = 1; adj <= 81; adj++)
-                    {
-                        if (sudokuGraph.Graph.IsNeighbour(vertex, adj) && vertexColors[adj].HasValue)
-                        {
-                            available[vertexColors[adj].Value] = false;
-                        }
-                    }
-        
-                    // Get all available colors and shuffle them
-                    var possibleColors = new List<int>();
-                    for (int color = 1; color <= 9; color++)
-                    {
-                        if (available[color])
-                            possibleColors.Add(color);
-                    }
-        
-                    if (possibleColors.Count == 0)
-                        return false;
-        
-                    // Try a random available color
-                    var rnd = new Random();
-                    vertexColors[vertex] = possibleColors[rnd.Next(possibleColors.Count)];
-                }
-            }
-        
-            return IsValidColoring();
-        }
-
-        private bool IsFixedVertex(int vertex)
-        {
-            return vertexColors.ContainsKey(vertex) && 
-                   vertexColors[vertex].HasValue && 
-                   IsPartOfInitialGrid(vertex);
-        }
-
-        private bool IsPartOfInitialGrid(int vertex)
-        {
-            for (int row = 0; row < 9; row++)
-            {
-                for (int col = 0; col < 9; col++)
-                {
-                    if (mappedGrid[row][col] == vertex)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
+        // Transfère les couleurs des sommets résolus vers la grille de Sudoku.
         private void TransferColorsToGrid(SudokuGrid s)
         {
             for (int row = 0; row < 9; row++)
@@ -244,13 +174,14 @@ namespace GraphColoring
             }
         }
 
+        // Retourne true si le coloriage actuel est valide, c'est-à-dire si toutes les couleurs sont assignées correctement sans conflit.
         private bool IsValidColoring()
         {
-            // Check if all vertices are colored
+            // Vérifie si tous les sommets sont colorés correctement.
             if (vertexColors.Values.Any(c => !c.HasValue))
                 return false;
 
-            // Check if adjacent vertices have different colors
+            // Vérifie si des sommets voisins partagent la même couleur, ce qui serait incorrect.
             for (int v = 1; v <= 81; v++)
             {
                 for (int u = v + 1; u <= 81; u++)
@@ -263,9 +194,10 @@ namespace GraphColoring
                 }
             }
 
-            return true;
+            return true; // Retourne vrai si toutes les conditions sont respectées.
         }
 
+        // Génère une matrice pour mapper chaque cellule de la grille de Sudoku à un indice unique utilisé dans le graphe.
         private int[][] GetMappedMatrix()
         {
             var matrix = new int[9][];
@@ -279,10 +211,10 @@ namespace GraphColoring
             {
                 for (int cols = 0; cols < 9; cols++)
                 {
-                    matrix[rows][cols] = count++;
+                    matrix[rows][cols] = count++; // Attribue un index unique à chaque cellule.
                 }
             }
-            return matrix;
+            return matrix; // Retourne la matrice mappée.
         }
     }
 }
