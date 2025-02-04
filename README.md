@@ -2,12 +2,83 @@ Bienvenue sur le dépôt du TP Sudoku.....
 
 ## Présentation des solvers
 
-DSaturSolver.cs :
+Dans ce projet, plusieurs solveurs de Sudoku ont été implémentés, chacun utilisant une approche algorithmique différente pour résoudre la grille. Les solveurs exploitent les concepts de coloration de graphe, un domaine des mathématiques discrètes qui permet d'affecter des couleurs à des nœuds sous certaines contraintes.
+
+# DSaturSolver
+L’algorithme DSatur (Degree of Saturation) est une heuristique utilisée pour la coloration de graphes. L'idée est d'attribuer des couleurs aux nœuds de manière itérative, en priorisant ceux ayant le plus de voisins déjà colorés (saturation élevée).
+
+Dans le cadre du Sudoku, nous pouvons modéliser chaque cellule de la grille comme un nœud d'un graphe, et relier par des arêtes les cellules qui partagent une contrainte (même ligne, même colonne ou même bloc). L'objectif est alors d'assigner une "couleur" (un chiffre entre 1 et 9) à chaque nœud, en respectant les contraintes du jeu.
+
+Fonctionnement
+1.Construction du graphe :
+Chaque case du Sudoku représente un nœud.
+Une arête est ajoutée entre deux nœuds s’ils appartiennent à la même ligne, colonne ou région 3×3.
+
+2. Initialisation :
+Les cellules déjà remplies dans la grille de départ sont considérées comme pré-colorées.
+
+3. Sélection du nœud suivant :
+À chaque itération, on choisit le nœud non coloré ayant la plus grande saturation (c'est-à-dire celui ayant le plus de voisins déjà colorés).
+En cas d’égalité, on choisit celui ayant le plus grand degré (nombre total de voisins).
+
+4. Assignation de la couleur (chiffre du Sudoku) :
+On attribue la plus petite couleur possible qui respecte les contraintes.
+
+5.Répétition jusqu’à ce que toutes les cases soient colorées.
+
+Avantages de DSatur :
+- Méthode efficace pour les problèmes de coloriage complexes.
+- Optimisation dynamique en fonction des voisins déjà colorés.
+- Réduction du backtracking par une meilleure sélection des nœuds.
+
+Références :
 - https://www.tutorialspoint.com/dsatur-algorithm-for-graph-coloring
 - https://www.geeksforgeeks.org/dsatur-algorithm-for-graph-coloring/
 
-QuickGraph.cs :
-- 
+
+# QuickGraph
+QuickGraph est une bibliothèque C# pour la manipulation des graphes. Elle permet de modéliser les relations entre les cellules du Sudoku sous forme de graphe et d'appliquer des algorithmes de parcours et de coloration de manière optimisée.
+
+Fonctionnement :
+1.Création d’un graphe orienté ou non-orienté pour représenter la structure du Sudoku.
+2.Ajout et suppression dynamique de nœuds et d’arêtes pour gérer différentes configurations.
+3.Implémentation de la coloration de graphe en facilitant l’assignation des valeurs dans le Sudoku.
+4.Support des algorithmes classiques de graphes (BFS, DFS, DSatur…).
+
+Pourquoi utiliser QuickGraph ?
+- Performance : manipulation rapide des nœuds et arêtes.
+- Interopérabilité : compatible avec LINQ et les structures de données C#.
+- Simplicité : évite d’avoir à coder un gestionnaire de graphe maison.
+
+Références :
+- https://github.com/KeRNeLith/QuikGraph
+- https://kernelith.github.io/QuikGraph/
+
+
+# GraphColoringSolver
+Ce solveur implémente une approche générique de coloration de graphe appliquée au Sudoku. Il se base sur QuickGraph pour la gestion du graphe et applique des heuristiques (comme DSatur) pour attribuer une couleur à chaque nœud en respectant les contraintes.
+
+Fonctionnement :
+1. Modélisation du Sudoku en tant que graphe : chaque cellule est un nœud, et chaque contrainte (même ligne, colonne ou bloc) est une arête.
+2. Sélection de l’algorithme de coloration (ex : DSatur, Welsh-Powell…).
+3. Propagation des valeurs en respectant les règles du Sudoku.
+4. Optimisation et backtracking si nécessaire.
+
+Différences avec DSaturSolver :
+- Approche plus générique : peut être utilisée pour d'autres problèmes de coloration de graphe.
+- Intégration facile avec d’autres algorithmes grâce à QuickGraph.
+- Flexible : possibilité d’expérimenter plusieurs stratégies de coloration.
+
+Références :
+- https://www.naukri.com/code360/library/graph-coloring
+- https://www.tutorialspoint.com/minimum-number-of-colours-required-to-colour-a-graph
+
+![image](https://github.com/user-attachments/assets/a5eab75c-f02b-41e7-924a-d6052cc53b17)
+
+
+
+
+
 
 ### [Solvers xxx](Sudoku.Xxx/README.md)
 
