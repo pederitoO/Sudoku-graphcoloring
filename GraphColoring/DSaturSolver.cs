@@ -5,18 +5,26 @@ using Sudoku.Shared;
 
 namespace GraphColoring
 {
+    // La classe DSaturSolver implémente l'interface ISudokuSolver qui définit une méthode Solve, 
+    // permettant d'intégrer cette classe dans un cadre plus large de résolution de Sudoku.
+    
     public class DSaturSolver : ISudokuSolver
     {
         private SudokuConnections sudokuGraph;
         private int[][] mappedGrid;
         private const int MaxAttempts = 1000000; // Limite pour éviter les boucles infinies
 
+        //Le constructeur initialise sudokuGraph et mappedGrid
+        
         public DSaturSolver()
         {
             sudokuGraph = new SudokuConnections();
             mappedGrid = GetMappedMatrix();
         }
 
+        // Cette méthode copie la grille Sudoku donnée dans un tableau local board pour le traitement. 
+        // Elle utilise ensuite une méthode de résolution récursive (SolveDSaturWithBacktracking) pour essayer de résoudre la grille
+        
         public SudokuGrid Solve(SudokuGrid s)
         {
             var board = new int[9, 9];
@@ -33,6 +41,13 @@ namespace GraphColoring
 
             return s;
         }
+
+        // Cette fonction est le cœur du solveur DSatur.
+        // Elle trouve une cellule vide avec la plus grande saturation, puis essaie récursivement de placer une valeur 
+        // valide dans cette cellule jusqu'à ce que la grille soit complète ou qu'aucune solution ne soit trouvée.
+
+csharp
+Copy
 
         private bool SolveDSaturWithBacktracking(int[,] board)
         {
@@ -55,6 +70,12 @@ namespace GraphColoring
             return false;
         }
 
+
+        // Les méthodes FindEmptyCell, CalculateSaturation, GetPossibleValues, et IsSafe fournissent la logique nécessaire
+        // pour identifier la cellule à essayer ensuite, calculer la saturation (nombre de valeurs différentes
+        // dans les cellules adjacentes), déterminer les valeurs possibles pour une cellule, 
+        // et vérifier si placer une valeur dans une cellule est sûr (ne viole aucune contrainte du Sudoku).
+        
         private (int row, int col) FindEmptyCell(int[,] board)
         {
             int maxSaturation = -1;
